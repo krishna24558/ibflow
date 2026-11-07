@@ -4,6 +4,7 @@
     python plot.py channel results/channel.npz       # outlet profile vs Poiseuille
     python plot.py field   results/cylinder.npz      # u contour of the last snapshot
     python plot.py forces  results/cylinder.npz      # Cd, Cl history
+    python plot.py divergence results/lid_cavity.npz # where |div u| sits (EDAC residual)
 """
 import argparse
 import os
@@ -100,9 +101,42 @@ def forces(path, skip_frac=0.25):
     _save(fig, path, "forces")
 
 
+def divergence(path):
+    """Map of |div u| from the last snapshot, on a log colour scale. EDAC converges to
+    div u = (nu/beta) lap p rather than 0, so this shows where that residual sits."""
+    from ibflow import compute_divergence
+
+    d = np.load(path)
+    U, V = d["U"][-1], d["V"][-1]
+    div = np.abs(compute_divergence(U, V, d["dx"], d["dy"]))
+    inner = (slice(2, -2), slice(2, -2))          # compute_divergence fills cells 2..n-3
+    div, x, y = div[inner], d["x_c"][2:-2], d["y_c"][2:-2]
+    i, j = np.unravel_index(np.argmax(div), div.shape)
+    away = div[8:-8, 8:-8].max()                  # more than ~8 cells from any wall
+    lo = max(np.percentile(div, 1), div.max() * 1e-4)
+
+    fig, ax = plt.subplots(figsize=(5.6, 5))
+    pc = ax.pcolormesh(x, y, div.T, shading="nearest", cmap="magma",
+                       norm=matplotlib.colors.LogNorm(vmin=lo, vmax=div.max()))
+    fig.colorbar(pc, ax=ax, label="|∇·u|")
+    ax.plot(x[i], y[j], "o", mfc="none", mec="cyan", ms=14, mew=2)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x / L")
+    ax.set_ylabel("y / L")
+    re = float(d["Re"]) if "Re" in d else float("nan")
+    beta = float(d["beta"]) if "beta" in d else float("nan")
+    ax.set_title(f"Residual divergence, Re = {re:g}, β = {beta:g}\n"
+                 f"max {div.max():.3f} at ({x[i]:.2f}, {y[j]:.2f}); away from walls ≤ {away:.4f}",
+                 fontsize=10)
+    print(f"max |div u| = {div.max():.4f} at x = {x[i]:.3f}, y = {y[j]:.3f}; "
+          f"away from walls: {away:.4f}")
+    _save(fig, path, "divergence")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("kind", choices=["cavity", "channel", "field", "forces"])
+    ap.add_argument("kind", choices=["cavity", "channel", "field", "forces", "divergence"])
     ap.add_argument("path")
     a = ap.parse_args()
-    {"cavity": cavity, "channel": channel, "field": field, "forces": forces}[a.kind](a.path)
+    {"cavity": cavity, "channel": channel, "field": field, "forces": forces,
+     "divergence": divergence}[a.kind](a.path)
