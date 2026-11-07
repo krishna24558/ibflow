@@ -10,7 +10,7 @@ Cases included: lid-driven cavity, developing channel flow, flow past a circular
 
 ## Validation: lid-driven cavity
 
-Centreline u-velocity compared with Ghia, Ghia & Shin (1982), 80 × 80 grid (`make validate`):
+horizontal velocity along the vertical centerline, x/L = 0.5, on an 80 × 80 physical grid (82 × 82 including ghost cells). Compared with Ghia, Ghia & Shin (1982), 80 × 80 grid (`make validate`):
 
 | Re = 100 | Re = 400 |
 |:---:|:---:|
@@ -20,6 +20,29 @@ Centreline u-velocity compared with Ghia, Ghia & Shin (1982), 80 × 80 grid (`ma
 |---:|---:|---:|---:|
 | 100 | 0.0044 | 0.0020 | −0.2130 / −0.2109 |
 | 400 | 0.0128 | 0.0062 | −0.3204 / −0.3273 |
+
+### Residual divergence
+
+The exact incompressible solution satisfies ∇·u = 0. In this implementation,
+the EDAC pressure update includes pressure diffusion. When the pressure
+update is near steady state, the balance is approximately
+∇·u = (ν/β)∇²p, so the numerical velocity field can retain residual
+divergence at finite β.
+
+The logged maximum excludes the ghost cells and the outermost layer of
+physical cells. In both cavity runs, the reported peak was near the
+top-right lid corner, at (x/L, y/L) ≈ (0.981, 0.981).
+
+| Re | Final maximum absolute divergence | Maximum away from walls |
+|---:|---:|---:|
+| 100 | 0.0675 | 0.0032 |
+| 400 | 0.0069 | 0.0010 |
+
+| Absolute divergence, Re = 100 | Absolute divergence, Re = 400 |
+|:---:|:---:|
+| ![Divergence map at Re = 100](docs/cavity_re100_divergence.png) | ![Divergence map at Re = 400](docs/cavity_re400_divergence.png) |
+
+
 
 ## Governing equations
 
@@ -48,7 +71,7 @@ cases/            lid_cavity.py, channel.py, external_body.py (cylinder / naca00
 validation/       Ghia et al. (1982) centreline data
 tests/            fast sanity tests (pytest)
 notebooks/        the original exploratory notebook (outputs stripped)
-plot.py           post-processing: centreline, profile, field, Cd/Cl history
+plot.py           post-processing: divergence maps, centreline, profile, field, Cd/Cl history,     
 Makefile
 ```
 
@@ -60,7 +83,7 @@ cd ibflow
 make install        # numpy, numba, matplotlib, pytest
 make test           # seconds
 make quick          # short run of every case to check the pipeline
-make validate       # cavity Re=100 and 400 vs Ghia (~5 min)
+make validate       # cavity Re=100 and 400 vs Ghia (~8 min on the machine used for these runs)
 ```
 
 Full runs (each saves `results/<case>.npz` and PNGs):
@@ -98,7 +121,7 @@ Note: the sphere drag correlation `24/Re (1 + 0.15 Re^0.687)` used in the origin
 ## References
 
 - U. Ghia, K. N. Ghia, C. T. Shin, "High-Re solutions for incompressible flow using the Navier–Stokes equations and a multigrid method", *J. Comput. Phys.* 48 (1982) 387–411.
-- J. A. Clausen, "Entropically damped form of artificial compressibility for explicit simulation of incompressible flow", *Phys. Rev. E* 87 (2013) 013309.
+- J. R. Clausen, "Entropically damped form of artificial compressibility for explicit simulation of incompressible flow", *Phys. Rev. E* 87 (2013) 013309.
 - C. S. Peskin, "The immersed boundary method", *Acta Numerica* 11 (2002) 479–517.
 
 ## License
