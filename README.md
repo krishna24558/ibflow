@@ -1,5 +1,7 @@
 # ibflow — 2-D Immersed Boundary Flow Solver
 
+[![tests](https://github.com/krishna24558/ibflow/actions/workflows/tests.yml/badge.svg)](https://github.com/krishna24558/ibflow/actions/workflows/tests.yml)
+
 A compact 2-D incompressible-flow solver written in Python and accelerated with Numba. It combines
 
 - an **Entropically Damped Artificial Compressibility (EDAC)** formulation on a **collocated finite-volume grid** (non-uniform Cartesian, ghost-cell boundaries),
