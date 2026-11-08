@@ -11,6 +11,8 @@ import os
 import sys
 from functools import partial
 
+import numpy as np
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from ibflow import (init_domain, external_flow_grid, circle, naca_symmetric,  # noqa: E402
                    rk2_ibm_convective_step, run)
@@ -29,6 +31,8 @@ def main(argv=None):
     ap.add_argument("--print-every", type=int, default=1000)
     ap.add_argument("--save-every", type=int, default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--perturb", type=float, default=0.0,
+                    help="initial vertical kick in the wake as a fraction of U_in (0.1 triggers shedding)")
     a = ap.parse_args(argv)
 
     D, rho = a.size, 1.0
@@ -37,6 +41,9 @@ def main(argv=None):
                               wall_region=6.0, step_conc=a.n_conc, step_in=60,
                               step_out=200, step_wall=50)
     x_c, y_c, dx, dy, xx, yy, P, U, V = init_domain(x, y, U_init=a.u_in, P_init=0.0)
+    if a.perturb:
+        # A symmetric set-up never sheds on its own; a small off-centre kick breaks the symmetry.
+        V += a.perturb * a.u_in * np.exp(-((xx - 1.5 * D) ** 2 + (yy - 0.25 * D) ** 2) / (0.5 * D) ** 2)
 
     if a.body == "cylinder":
         lag_x, lag_y = circle(D / 2, dx.min())

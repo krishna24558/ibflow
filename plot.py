@@ -98,6 +98,13 @@ def forces(path, skip_frac=0.25):
     if len(cd) > start + 1:
         axs[0].set_ylim(np.percentile(cd[start:], 1) * 0.8, np.percentile(cd[start:], 99) * 1.2)
         print(f"Mean C_D over last {100 * (1 - skip_frac):.0f}% of run: {np.mean(cd[start:]):.3f}")
+    if len(cl) > 32:
+        half = len(cl) // 2                                   # second half: shedding has settled
+        c = cl[half:-1] - cl[half:-1].mean()                  # last sample is off the regular spacing
+        up = t[half + 1:-1][(c[:-1] < 0) & (c[1:] >= 0)]      # one upward zero crossing per period
+        if len(up) > 2:
+            st = float(d["L"]) / float(d["U_ref"]) / np.diff(up).mean()
+            print(f"Lift amplitude {(c.max() - c.min()) / 2:.3f}, Strouhal number St = f D / U = {st:.3f}")
     _save(fig, path, "forces")
 
 
