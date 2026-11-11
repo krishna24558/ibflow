@@ -100,17 +100,28 @@ make cavity RE=100          # different Reynolds number
 
 Every case script also takes command-line options (`python cases/external_body.py --help`). Runs save progressively, so stopping with Ctrl-C still leaves usable data.
 
-## Cylinder at Re = 100
+## Cylinder at Re = 100: vortex shedding
 
-From the original 698,000-step run (D = 1.5, U = 5), the drag force settled around F<sub>x</sub> ≈ 24 per unit span, giving
+A small off-center vertical velocity perturbation (`--perturb 0.1`)
+breaks the initial wake symmetry. The run used Δt = 4 × 10⁻⁴ and
+100,000 time steps.
 
-C<sub>D</sub> = F<sub>x</sub> / (½ ρ U² D) ≈ 24 / 18.75 ≈ **1.3**,
+![Cylinder drag and lift histories at Re = 100](docs/cylinder_forces.png)
 
-which is in the 1.3–1.4 range typically reported for a 2-D cylinder at this Reynolds number.
+| Quantity | ibflow result | Published 2-D results |
+|---|---:|---:|
+| Strouhal number | 0.165 | 0.164–0.165 |
+| Lift coefficient amplitude | 0.475 | 0.332–0.339 |
+| Mean drag coefficient | 1.555 | 1.33–1.35 |
 
-**Known limitation:** the lift stayed close to zero (|C<sub>L</sub>| ≲ 0.003), whereas a cylinder at Re = 100 should shed vortices with a lift amplitude of roughly ±0.3. The set-up is perfectly symmetric and the run was stopped early, so the wake had most likely not yet become unstable; the slow oscillation in drag is probably artificial-compressibility pressure waves reflecting in the domain. Adding a small initial perturbation and running longer is the next step (see roadmap).
+The shedding frequency agrees with the published results, while the lift
+amplitude and mean drag are higher. Grid resolution, immersed-boundary
+force spreading, and confinement are possible contributors. This run
+does not isolate their effects.
 
-Note: the sphere drag correlation `24/Re (1 + 0.15 Re^0.687)` used in the original notebook applies to spheres, not 2-D cylinders, so it is not used here as a reference.
+The earlier run gave a drag coefficient near 1.3 but did not show
+sustained lift oscillations. That value was not a mean over developed
+shedding cycles.
 
 ## Roadmap
 
