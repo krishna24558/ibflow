@@ -59,6 +59,24 @@ The ν∇²p term damps the pressure (acoustic) waves that artificial compressib
 
 **Immersed boundary.** The body is a set of Lagrangian markers. At each marker the fluid velocity is interpolated with a 4-point cosine delta, the forcing `f = −u_marker/Δt` (no-slip, stationary body) is computed, and it is spread back onto the grid with the same kernel. The hydrodynamic force on the body is the negative sum of that forcing.
 
+### Why EDAC suits GPUs
+
+*Status: design argument, not yet demonstrated. ibflow currently runs on the CPU (Numba); a GPU port is on the roadmap.*
+
+- **Local updates only.** Each cell's update reads its four neighbours and writes only itself, so every cell can be updated in parallel, one GPU thread per cell, with no ordering.
+- **No global synchronization.** A pressure-Poisson solver (CG, BiCGStab, multigrid) needs dot products, which are global reductions, in every iteration, for many iterations per time step. Those reductions leave most GPU cores idle. EDAC needs a global reduction only for logged diagnostics.
+- **Fixed cost per step.** There is no linear solve and no convergence test, so the cost of a run is simply steps × cells.
+- **Bandwidth-bound structured stencil.** Memory access is regular and coalesced, needs no sparse-matrix index arrays, and can be fused into a few kernels. That is the workload where GPU memory bandwidth pays off most.
+- **Scales across devices** with a one-cell halo exchange between neighbouring sub-domains.
+
+The trade-offs:
+
+- **More time steps.** The step is acoustic-limited, (|u| + √β)Δt/Δx ≲ 1, which is about 5× more steps than a convective limit at the cylinder's Ma = 0.25.
+- **Residual divergence.** It scales as ν/β (measured: max|∇·u| 0.0675 → 0.0177 for β 500 → 2000 at Re = 100).
+- **Small grids.** Grids like the 80 × 80 cavity are too small to fill a GPU.
+
+Whether EDAC is faster overall has to be shown with a CPU-vs-GPU timing study across grid sizes, which is not done yet.
+
 ## Repository layout
 
 ```
@@ -127,6 +145,7 @@ shedding cycles.
 
 - [ ] Trigger vortex shedding (perturbed inflow), report Strouhal number and C<sub>L</sub> amplitude
 - [ ] Grid-convergence study for the cylinder drag
+- [ ] GPU port of the EDAC kernels (Numba CUDA), validated against the CPU results, with time per step vs grid size
 - [ ] Angle of attack for the airfoil and lift curve
 - [ ] Moving bodies (IBM with prescribed motion)
 - [ ] Energy equation (heat transfer from immersed bodies)
